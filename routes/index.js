@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const UserModel = require('../models/User.model')
 
 
+
 /* GET home page */
 router.get('/', (req, res, next) => res.render('index'));
 
@@ -37,11 +38,6 @@ router.get('/login', (req, res, next)=>{
 router.post("/login", (req, res, next) => {
 
     const {username, password} = req.body
-
-    if(!username || !password){
-        res.render('login', {msg: 'Please enter all fields'})
-        return
-    }
     
     UserModel.findOne({username : username})
       .then((result)=>{
@@ -49,6 +45,8 @@ router.post("/login", (req, res, next) => {
               bcrypt.compare(password, result.password)
                 .then((isMatching)=>{
                     if(isMatching){
+                        req.session.loggedInUser = result
+                        req.session.areyoutired = false
                         res.redirect('/main')
                     }
                     else {
@@ -70,24 +68,26 @@ router.post("/login", (req, res, next) => {
   });
 
   const checkLoggedInUser = (req, res, next) => {
+    console.log(req.session.loggedInUser)
     if (req.session.loggedInUser) {
-        next()
+       next()
     }
     else {
-        console.log('Not working')
+        res.redirect('/signin')
     }
-  }
+    
+}
 
-  router.get('/main', checkLoggedInUser, (req, res, next) => {
-    let name = req.session.loggedInUser.username
-    res.render('main')
+  router.get('/main',checkLoggedInUser, (req, res) => {
+    let username = req.session.loggedInUser.username
+    res.render('main', {username})
   })
 
-  router.get('/private', (req, res, next)=>{
+  router.get('/private',checkLoggedInUser, (req, res)=>{
       res.render('private')
   })
 
-  router.get('/logout', (req, res, next) => {
+  router.get('/logout', (req, res) => {
     req.session.destroy()
 		res.redirect('/login')
 })
